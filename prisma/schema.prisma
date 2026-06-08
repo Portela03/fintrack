@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connections  PluggyConnection[]
+  accounts     BankAccount[]
+  transactions Transaction[]
+  categories   Category[]
+  budgets      Budget[]
+  investments  Investment[]
+  goals        Goal[]
+  simulations  FinancingSimulation[]
+  chatSessions ChatSession[]
+
+  @@map("users")
+}
+
+// ─── Banking ─────────────────────────────────────────────────────────────────
+
+model PluggyConnection {
+  id         String    @id @default(uuid())
+  userId     String
+  itemId     String    @unique
+  status     String    @default("UPDATING")
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts BankAccount[]
+
+  @@map("pluggy_connections")
+}
+
+// ─── Financial ───────────────────────────────────────────────────────────────
+
+model BankAccount {
+  id              String   @id @default(uuid())
+  userId          String
+  connectionId    String
+  pluggyAccountId String   @unique
+  type            String
+  subtype         String
+  name            String
+  balance         Decimal  @db.Decimal(15, 2)
+  currencyCode    String   @default("BRL")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection   PluggyConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("bank_accounts")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String
+  icon      String?
+  color     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id                  String   @id @default(uuid())
+  userId              String
+  accountId           String
+  pluggyTransactionId String   @unique
+  amount              Decimal  @db.Decimal(15, 2)
+  type                String
+  date                DateTime
+  description         String
+  categoryId          String?
+  status              String   @default("POSTED")
+  paymentMethod       String?
+  currencyCode        String   @default("BRL")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category Category?   @relation(fields: [categoryId], references: [id])
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@map("transactions")
+}
+
+// ─── Budgeting ────────────────────────────────────────────────────────────────
+
+model Budget {
+  id          String   @id @default(uuid())
+  userId      String
+  categoryId  String
+  limitAmount Decimal  @db.Decimal(15, 2)
+  period      String
+  startDate   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+// ─── Investments ──────────────────────────────────────────────────────────────
+
+model Investment {
+  id                 String    @id @default(uuid())
+  userId             String
+  pluggyInvestmentId String    @unique
+  name               String
+  type               String
+  subtype            String?
+  balance            Decimal   @db.Decimal(15, 2)
+  amount             Decimal?  @db.Decimal(15, 2)
+  amountProfit       Decimal?  @db.Decimal(15, 2)
+  annualRate         Float?
+  rateType           String?
+  dueDate            DateTime?
+  status             String    @default("ACTIVE")
+  currencyCode       String    @default("BRL")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("investments")
+}
+
+// ─── Goals ───────────────────────────────────────────────────────────────────
+
+model Goal {
+  id            String    @id @default(uuid())
+  userId        String
+  name          String
+  type          String
+  targetAmount  Decimal   @db.Decimal(15, 2)
+  currentAmount Decimal   @db.Decimal(15, 2) @default(0)
+  deadline      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("goals")
+}
+
+// ─── Financing ───────────────────────────────────────────────────────────────
+
+model FinancingSimulation {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  propertyValue    Decimal  @db.Decimal(15, 2)
+  downPayment      Decimal  @db.Decimal(15, 2)
+  loanMonths       Int
+  monthlyRate      Float
+  amortizationType String
+  createdAt        DateTime @default(now())
+
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installments FinancingInstallment[]
+
+  @@map("financing_simulations")
+}
+
+model FinancingInstallment {
+  id               String  @id @default(uuid())
+  simulationId     String
+  month            Int
+  principal        Decimal @db.Decimal(15, 2)
+  interest         Decimal @db.Decimal(15, 2)
+  totalPayment     Decimal @db.Decimal(15, 2)
+  remainingBalance Decimal @db.Decimal(15, 2)
+
+  simulation FinancingSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@index([simulationId])
+  @@map("financing_installments")
+}
+
+// ─── AI Assistant ─────────────────────────────────────────────────────────────
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String   @default("Nova conversa")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
+

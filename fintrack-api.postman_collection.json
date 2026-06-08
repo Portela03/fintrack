@@ -1,0 +1,402 @@
+{
+  "info": {
+    "name": "FinTrack API",
+    "description": "Sistema de Organização Financeira Pessoal com IA\n\n**Como usar:**\n1. Faça login em `POST /auth/login`\n2. O token é salvo automaticamente na variável `{{accessToken}}`\n3. Todos os endpoints autenticados já usam `{{accessToken}}` automaticamente",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "", "type": "string" },
+    { "key": "simulationId", "value": "", "type": "string" },
+    { "key": "budgetId", "value": "", "type": "string" },
+    { "key": "goalId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Registrar usuário",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao@email.com\",\n  \"name\": \"João Silva\",\n  \"password\": \"Senha@1234\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  console.log('✅ accessToken salvo automaticamente');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"joao@email.com\",\n  \"password\": \"Senha@1234\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Banking (Pluggy)",
+      "item": [
+        {
+          "name": "Criar conexão bancária",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/connections", "host": ["{{baseUrl}}"], "path": ["connections"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"seu-item-id-do-pluggy\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Webhook Pluggy (simulação)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/connections/webhook", "host": ["{{baseUrl}}"], "path": ["connections", "webhook"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"item/updated\",\n  \"itemId\": \"seu-item-id-do-pluggy\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Financial (Transações)",
+      "item": [
+        {
+          "name": "Listar transações",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/transactions?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "from", "value": "2026-06-01", "disabled": true },
+                { "key": "to", "value": "2026-06-30", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Relatório de gastos por categoria",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/report",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions", "report"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true },
+                { "key": "to", "value": "2026-06-30", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Budgeting (Orçamentos)",
+      "item": [
+        {
+          "name": "Criar orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('budgetId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/budgets", "host": ["{{baseUrl}}"], "path": ["budgets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"uuid-da-categoria\",\n  \"limitAmount\": 500.00,\n  \"period\": \"MONTHLY\",\n  \"startDate\": \"2026-06-01\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar orçamentos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/budgets", "host": ["{{baseUrl}}"], "path": ["budgets"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir orçamento",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/budgets/{{budgetId}}", "host": ["{{baseUrl}}"], "path": ["budgets", "{{budgetId}}"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Goals (Metas)",
+      "item": [
+        {
+          "name": "Criar meta financeira",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('goalId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/goals", "host": ["{{baseUrl}}"], "path": ["goals"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reserva de Emergência\",\n  \"type\": \"EMERGENCY_FUND\",\n  \"targetAmount\": 30000.00,\n  \"deadline\": \"2027-12-31\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar metas com progresso",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/goals", "host": ["{{baseUrl}}"], "path": ["goals"] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Financing (Financiamentos)",
+      "item": [
+        {
+          "name": "Criar simulação SAC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('simulationId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/financing/simulations", "host": ["{{baseUrl}}"], "path": ["financing", "simulations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Apartamento Centro - SAC\",\n  \"propertyValue\": 500000.00,\n  \"downPayment\": 100000.00,\n  \"loanMonths\": 360,\n  \"monthlyRate\": 0.8,\n  \"amortizationType\": \"SAC\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar simulação PRICE",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/financing/simulations", "host": ["{{baseUrl}}"], "path": ["financing", "simulations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Apartamento Centro - PRICE\",\n  \"propertyValue\": 500000.00,\n  \"downPayment\": 100000.00,\n  \"loanMonths\": 360,\n  \"monthlyRate\": 0.8,\n  \"amortizationType\": \"PRICE\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar simulações",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/financing/simulations", "host": ["{{baseUrl}}"], "path": ["financing", "simulations"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver parcelas da simulação",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/financing/simulations/{{simulationId}}/installments", "host": ["{{baseUrl}}"], "path": ["financing", "simulations", "{{simulationId}}", "installments"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Comparar SAC vs PRICE",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/financing/compare", "host": ["{{baseUrl}}"], "path": ["financing", "compare"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanAmount\": 400000.00,\n  \"monthlyRate\": 0.8,\n  \"months\": 360\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. AI Assistant (Gemini)",
+      "item": [
+        {
+          "name": "Criar sessão de chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('sessionId', json.id);",
+                  "  console.log('✅ sessionId salvo:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/ai/sessions", "host": ["{{baseUrl}}"], "path": ["ai", "sessions"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar sessões",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/ai/sessions", "host": ["{{baseUrl}}"], "path": ["ai", "sessions"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar mensagem ao assistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/ai/sessions/{{sessionId}}/messages", "host": ["{{baseUrl}}"], "path": ["ai", "sessions", "{{sessionId}}", "messages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Olá! Me dê uma dica financeira para economizar mais.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Perguntar sobre gastos",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/ai/sessions/{{sessionId}}/messages", "host": ["{{baseUrl}}"], "path": ["ai", "sessions", "{{sessionId}}", "messages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Qual é a melhor forma de montar uma reserva de emergência?\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Histórico de mensagens",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/ai/sessions/{{sessionId}}/messages", "host": ["{{baseUrl}}"], "path": ["ai", "sessions", "{{sessionId}}", "messages"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Gerar insights financeiros do mês",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/ai/insights", "host": ["{{baseUrl}}"], "path": ["ai", "insights"] }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
