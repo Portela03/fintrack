@@ -3,10 +3,6 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { UseCase } from '@shared/application/use-case.interface';
 import {
-  IPluggyConnectionPort,
-  PLUGGY_CONNECTION_PORT,
-} from '../../ports/i-pluggy.port';
-import {
   IConnectionRepository,
   CONNECTION_REPOSITORY,
 } from '../../../domain/repositories/i-connection.repository';
@@ -19,8 +15,8 @@ export interface CreateConnectionInput {
 }
 
 export interface CreateConnectionOutput {
-  connectToken: string;
   connectionId: string;
+  status: string;
 }
 
 @Injectable()
@@ -28,8 +24,6 @@ export class CreateConnectionUseCase
   implements UseCase<CreateConnectionInput, CreateConnectionOutput>
 {
   constructor(
-    @Inject(PLUGGY_CONNECTION_PORT)
-    private readonly pluggyPort: IPluggyConnectionPort,
     @Inject(CONNECTION_REPOSITORY)
     private readonly connectionRepo: IConnectionRepository,
     @InjectQueue(QUEUE_NAMES.SYNC)
@@ -37,8 +31,6 @@ export class CreateConnectionUseCase
   ) {}
 
   async execute(input: CreateConnectionInput): Promise<CreateConnectionOutput> {
-    const connectToken = await this.pluggyPort.createConnectToken(input.userId);
-
     const connection = PluggyConnection.create({
       userId: input.userId,
       itemId: input.itemId,
@@ -52,6 +44,6 @@ export class CreateConnectionUseCase
       { delay: 2000 },
     );
 
-    return { connectToken, connectionId: connection.id };
+    return { connectionId: connection.id, status: connection.status };
   }
 }

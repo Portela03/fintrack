@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>FinTrack – Conectar Banco (Pluggy Widget)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+    p.sub { color: #94a3b8; font-size: 0.875rem; margin-bottom: 32px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 28px; width: 100%; max-width: 520px; }
+    label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    input, textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    input:focus, textarea:focus { border-color: #6366f1; }
+    textarea { resize: vertical; min-height: 72px; font-family: monospace; font-size: 0.8rem; }
+    button { width: 100%; margin-top: 16px; padding: 12px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #374151; cursor: not-allowed; }
+    .step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+    .step-num { background: #6366f1; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .step-content h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+    .step-content p { font-size: 0.8rem; color: #94a3b8; }
+    .result { margin-top: 20px; padding: 16px; background: #064e3b; border: 1px solid #065f46; border-radius: 8px; display: none; }
+    .result.show { display: block; }
+    .result h3 { color: #34d399; font-size: 0.9rem; margin-bottom: 8px; }
+    .result code { display: block; background: #022c22; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; word-break: break-all; color: #6ee7b7; margin-bottom: 8px; }
+    .result p { font-size: 0.8rem; color: #6ee7b7; }
+    .error { margin-top: 20px; padding: 16px; background: #450a0a; border: 1px solid #7f1d1d; border-radius: 8px; display: none; }
+    .error.show { display: block; }
+    .error h3 { color: #f87171; font-size: 0.9rem; margin-bottom: 4px; }
+    .error p { font-size: 0.8rem; color: #fca5a5; }
+    hr { border: none; border-top: 1px solid #334155; margin: 24px 0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+    .badge-purple { background: #4c1d95; color: #c4b5fd; }
+    .badge-green { background: #064e3b; color: #34d399; }
+    .banks { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .bank { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<h1>🏦 FinTrack – Conectar Banco Real</h1>
+<p class="sub">Authorize o acesso via Pluggy (Open Finance Brasil)</p>
+
+<div class="card">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h3>Obtenha seu Connect Token</h3>
+      <p>No Postman, execute <strong>GET /connections/connect-token</strong> (com JWT). Copie o valor de <code>connectToken</code> da resposta.</p>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label>Connect Token (do Postman)</label>
+    <textarea id="tokenInput" placeholder="Cole aqui o connectToken retornado pela API..."></textarea>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h3>Conectar banco</h3>
+      <p>Clique em "Abrir Widget Pluggy". Autorize o acesso ao Nubank ou Inter. Após autorizar, o <strong>itemId</strong> aparece abaixo automaticamente.</p>
+      <div class="banks">
+        <span class="bank">🟣 Nubank</span>
+        <span class="bank">🟠 Banco Inter</span>
+        <span class="bank">+ 300 instituições</span>
+      </div>
+    </div>
+  </div>
+
+  <button id="openWidget" onclick="openWidget()">Abrir Widget Pluggy</button>
+
+  <div class="result" id="result">
+    <h3>✅ Banco conectado com sucesso!</h3>
+    <code id="itemIdDisplay"></code>
+    <p>👉 Copie o <strong>itemId</strong> acima e cole na variável <strong><code>pluggyItemId</code></strong> do Postman.<br>
+    Em seguida, execute <strong>POST /connections</strong> com esse itemId.</p>
+  </div>
+
+  <div class="error" id="errorBox">
+    <h3>❌ Erro</h3>
+    <p id="errorMsg"></p>
+  </div>
+
+  <hr />
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h3>Registrar conexão no FinTrack</h3>
+      <p>No Postman, execute <strong>POST /connections</strong> com o itemId. A sincronização inicia automaticamente em background.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <h3>Verificar dados sincronizados</h3>
+      <p>Aguarde ~10s e execute <strong>GET /connections</strong> (status: UPDATED) e <strong>GET /connections/:id/accounts</strong> para ver contas e saldos reais.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.pluggy.ai/pluggy-connect/v2/pluggy-connect.js"></script>
+<script>
+  function openWidget() {
+    const token = document.getElementById('tokenInput').value.trim();
+    if (!token) {
+      showError('Cole o connectToken no campo acima antes de continuar.');
+      return;
+    }
+
+    hideResult();
+    hideError();
+
+    document.getElementById('openWidget').disabled = true;
+    document.getElementById('openWidget').textContent = 'Aguardando autorização...';
+
+    const pluggyConnect = new PluggyConnect({
+      connectToken: token,
+      onSuccess: (itemData) => {
+        const itemId = itemData.item?.id || itemData.itemId || itemData.id;
+        document.getElementById('itemIdDisplay').textContent = `itemId: "${itemId}"`;
+        document.getElementById('result').classList.add('show');
+        document.getElementById('openWidget').disabled = false;
+        document.getElementById('openWidget').textContent = 'Conectar outro banco';
+
+        // Copy to clipboard automatically
+        navigator.clipboard.writeText(itemId).catch(() => {});
+        console.log('[FinTrack] itemId obtido:', itemId);
+      },
+      onError: (error) => {
+        showError('Erro no widget Pluggy: ' + (error?.message || JSON.stringify(error)));
+        document.getElementById('openWidget').disabled = false;
+        document.getElementById('openWidget').textContent = 'Abrir Widget Pluggy';
+      },
+      onClose: () => {
+        document.getElementById('openWidget').disabled = false;
+        document.getElementById('openWidget').textContent = 'Abrir Widget Pluggy';
+      },
+    });
+
+    pluggyConnect.init();
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg;
+    document.getElementById('errorBox').classList.add('show');
+  }
+  function hideError() { document.getElementById('errorBox').classList.remove('show'); }
+  function hideResult() { document.getElementById('result').classList.remove('show'); }
+</script>
+
+</body>
+</html>

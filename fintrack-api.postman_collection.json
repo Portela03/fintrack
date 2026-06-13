@@ -7,6 +7,9 @@
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
     { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "connectToken", "value": "", "type": "string" },
+    { "key": "pluggyItemId", "value": "", "type": "string" },
+    { "key": "connectionId", "value": "", "type": "string" },
     { "key": "sessionId", "value": "", "type": "string" },
     { "key": "simulationId", "value": "", "type": "string" },
     { "key": "budgetId", "value": "", "type": "string" },
@@ -60,10 +63,52 @@
       ]
     },
     {
-      "name": "2. Banking (Pluggy)",
+      "name": "2. Banking (Pluggy - Open Finance)",
+      "description": "Fluxo completo:\n1. GET connect-token → copia connectToken\n2. Abre widget Pluggy com o token (use o script pluggy-widget.html)\n3. Autoriza Nubank ou Inter no widget\n4. Widget retorna itemId → copia\n5. POST /connections com o itemId\n6. Aguarda sync (alguns segundos)\n7. GET /connections para ver status\n8. GET /connections/:id/accounts para ver contas e saldos",
       "item": [
         {
-          "name": "Criar conexão bancária",
+          "name": "1. Obter Connect Token (para widget)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.connectToken) {",
+                  "  pm.collectionVariables.set('connectToken', json.connectToken);",
+                  "  console.log('✅ connectToken salvo:', json.connectToken);",
+                  "  console.log('👉 Agora abra o pluggy-widget.html no browser e use este token para conectar seu banco.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/connections/connect-token", "host": ["{{baseUrl}}"], "path": ["connections", "connect-token"] }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Registrar conexão (após widget retornar itemId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.connectionId) {",
+                  "  pm.collectionVariables.set('connectionId', json.connectionId);",
+                  "  console.log('✅ connectionId salvo:', json.connectionId);",
+                  "  console.log('🔄 Sincronização iniciada em background. Aguarde ~10s e execute GET /connections.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -73,21 +118,49 @@
             "url": { "raw": "{{baseUrl}}/connections", "host": ["{{baseUrl}}"], "path": ["connections"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"itemId\": \"seu-item-id-do-pluggy\"\n}"
+              "raw": "{\n  \"itemId\": \"{{pluggyItemId}}\"\n}"
             }
           },
           "response": []
         },
         {
-          "name": "Webhook Pluggy (simulação)",
+          "name": "3. Listar conexões (verificar status sync)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/connections", "host": ["{{baseUrl}}"], "path": ["connections"] }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Ver contas e saldos da conexão",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/connections/{{connectionId}}/accounts", "host": ["{{baseUrl}}"], "path": ["connections", "{{connectionId}}", "accounts"] }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Disparar re-sync manual (simula webhook Pluggy)",
+          "description": "Simula o webhook que o Pluggy envia quando o item é atualizado. Em produção, o Pluggy chama este endpoint automaticamente. Use para forçar re-sincronização de transações.",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/connections/webhook", "host": ["{{baseUrl}}"], "path": ["connections", "webhook"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"event\": \"item/updated\",\n  \"itemId\": \"seu-item-id-do-pluggy\"\n}"
+              "raw": "{\n  \"event\": \"item/updated\",\n  \"itemId\": \"{{pluggyItemId}}\"\n}"
             }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Remover conexão bancária",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/connections/{{connectionId}}", "host": ["{{baseUrl}}"], "path": ["connections", "{{connectionId}}"] }
           },
           "response": []
         }

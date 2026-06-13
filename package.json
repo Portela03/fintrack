@@ -21,7 +21,6 @@
     "test:integration": "jest --config ./test/jest-integration.json --runInBand"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",

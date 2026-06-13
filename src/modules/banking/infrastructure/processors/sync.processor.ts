@@ -2,46 +2,38 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { QUEUE_NAMES, SYNC_JOBS } from '@shared/infrastructure/queue/queue.constants';
-
-interface SyncJobData {
-  connectionId: string;
-  itemId: string;
-  userId: string;
-}
+import { SyncAccountsJob, SyncAccountsJobData } from '../jobs/sync-accounts.job';
+import { SyncTransactionsJob, SyncTransactionsJobData } from '../jobs/sync-transactions.job';
+import { SyncInvestmentsJob, SyncInvestmentsJobData } from '../jobs/sync-investments.job';
 
 @Processor(QUEUE_NAMES.SYNC)
 @Injectable()
 export class SyncProcessor extends WorkerHost {
   private readonly logger = new Logger(SyncProcessor.name);
 
-  async process(job: Job<SyncJobData>): Promise<void> {
-    this.logger.log(`Processing job: ${job.name} for item ${job.data.itemId}`);
+  constructor(
+    private readonly syncAccountsJob: SyncAccountsJob,
+    private readonly syncTransactionsJob: SyncTransactionsJob,
+    private readonly syncInvestmentsJob: SyncInvestmentsJob,
+  ) {
+    super();
+  }
+
+  async process(job: Job): Promise<void> {
+    this.logger.log(`Processing job: ${job.name}`);
 
     switch (job.name) {
       case SYNC_JOBS.SYNC_ACCOUNTS:
-        await this.handleSyncAccounts(job.data);
+        await this.syncAccountsJob.execute(job.data as SyncAccountsJobData);
         break;
       case SYNC_JOBS.SYNC_TRANSACTIONS:
-        await this.handleSyncTransactions(job.data);
+        await this.syncTransactionsJob.execute(job.data as SyncTransactionsJobData);
         break;
       case SYNC_JOBS.SYNC_INVESTMENTS:
-        await this.handleSyncInvestments(job.data);
+        await this.syncInvestmentsJob.execute(job.data as SyncInvestmentsJobData);
         break;
       default:
         this.logger.warn(`Unknown job: ${job.name}`);
     }
-  }
-
-  private async handleSyncAccounts(data: SyncJobData): Promise<void> {
-    // Injected via module — actual sync logic delegated to financial module use-cases via events
-    this.logger.log(`Sync accounts for connection ${data.connectionId}`);
-  }
-
-  private async handleSyncTransactions(data: SyncJobData): Promise<void> {
-    this.logger.log(`Sync transactions for connection ${data.connectionId}`);
-  }
-
-  private async handleSyncInvestments(data: SyncJobData): Promise<void> {
-    this.logger.log(`Sync investments for connection ${data.connectionId}`);
   }
 }

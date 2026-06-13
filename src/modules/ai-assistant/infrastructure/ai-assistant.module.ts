@@ -4,7 +4,7 @@ import {
   CATEGORIZATION_PORT,
   INSIGHT_PORT,
 } from '../application/ports/i-llm.port';
-import { GeminiAdapter } from './adapters/gemini.adapter';
+import { OpenRouterAdapter } from './adapters/openrouter.adapter';
 import { AiController } from './http/ai.controller';
 import { SendMessageUseCase } from '../application/use-cases/send-message/send-message.use-case';
 import { GenerateInsightsUseCase } from '../application/use-cases/generate-insights/generate-insights.use-case';
@@ -12,10 +12,10 @@ import { GenerateInsightsUseCase } from '../application/use-cases/generate-insig
 @Module({
   controllers: [AiController],
   providers: [
-    GeminiAdapter,
-    { provide: CHAT_PORT, useExisting: GeminiAdapter },
-    { provide: CATEGORIZATION_PORT, useExisting: GeminiAdapter },
-    { provide: INSIGHT_PORT, useExisting: GeminiAdapter },
+    OpenRouterAdapter,
+    { provide: CHAT_PORT, useExisting: OpenRouterAdapter },
+    { provide: CATEGORIZATION_PORT, useExisting: OpenRouterAdapter },
+    { provide: INSIGHT_PORT, useExisting: OpenRouterAdapter },
     SendMessageUseCase,
     GenerateInsightsUseCase,
   ],

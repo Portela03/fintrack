@@ -1,1 +1,0 @@
-{"version":3,"file":"domain-event.base.js","sourceRoot":"","sources":["../../../../src/shared/domain/domain-event.base.ts"],"names":[],"mappings":";;;AAAA,MAAsB,WAAW;IACf,UAAU,CAAO;IACjB,SAAS,CAAS;IAElC,YAAY,SAAiB;QAC3B,IAAI,CAAC,UAAU,GAAG,IAAI,IAAI,EAAE,CAAC;QAC7B,IAAI,CAAC,SAAS,GAAG,SAAS,CAAC;IAC7B,CAAC;CACF;AARD,kCAQC"}
